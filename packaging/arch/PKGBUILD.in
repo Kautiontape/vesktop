@@ -1,0 +1,48 @@
+# Maintainer: Shawn Squire <shawn@shawnsquire.me>
+#
+# Template for the ktn build of Vesktop. Kautiontape/ktn-repo's scripts/build-package.sh
+# fills in @PKGVER@/@UPSTREAM_VERSION@ and supplies ktn-src.tar.gz, a `git archive` of the
+# ktn branch. Installs like the AUR vesktop-bin (/opt/vesktop, /usr/bin/vesktop) so it
+# drops in for it.
+
+pkgname=vesktop-ktn
+_pkgname=vesktop
+pkgver=@PKGVER@
+pkgrel=1
+pkgdesc='Vesktop (Discord with Vencord) — ktn build with a push-to-talk IPC socket'
+arch=('x86_64')
+url='https://github.com/Kautiontape/vesktop'
+license=('GPL-3.0-or-later')
+depends=('alsa-lib' 'gtk3' 'nss')
+makedepends=('git' 'nodejs' 'pnpm')
+optdepends=(
+  'libnotify: Notifications'
+  'xdg-utils: Open links, files, etc'
+)
+provides=("${_pkgname}=@UPSTREAM_VERSION@" "vencord-desktop=@UPSTREAM_VERSION@")
+conflicts=("${_pkgname}" 'vencord-desktop')
+options=('!strip' '!debug')
+source=('ktn-src.tar.gz')
+sha256sums=('SKIP')
+
+build() {
+  cd ktn-src
+  pnpm install --frozen-lockfile
+  pnpm package:dir
+}
+
+check() {
+  cd ktn-src
+  pnpm testTypes
+}
+
+package() {
+  cd ktn-src
+  install -d "$pkgdir/opt/$_pkgname"
+  cp -a dist/linux-unpacked/. "$pkgdir/opt/$_pkgname/"
+  # No self-updater: updates come through pacman.
+  rm -f "$pkgdir/opt/$_pkgname/resources/app-update.yml"
+  install -Dm755 packaging/arch/vesktop.sh "$pkgdir/usr/bin/$_pkgname"
+  install -Dm644 packaging/arch/vesktop.desktop "$pkgdir/usr/share/applications/$_pkgname.desktop"
+  install -Dm644 build/icon.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/$_pkgname.svg"
+}
